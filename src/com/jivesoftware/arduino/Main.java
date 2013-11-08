@@ -13,8 +13,10 @@ import com.jivesoftware.arduino.jive.GetCustomStream;
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        ListenAndSpeak listenAndSpeak = new ListenAndSpeak();
+        ArduinoConnection arduinoConnection = new ArduinoConnection();
+        ListenAndSpeak listenAndSpeak = new ListenAndSpeak(arduinoConnection);
         GetCustomStream streamCommand = new GetCustomStream(listenAndSpeak);
+        arduinoConnection.initialize();
         listenAndSpeak.start();
         streamCommand.start();
     }

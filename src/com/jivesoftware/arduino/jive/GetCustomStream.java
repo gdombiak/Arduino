@@ -1,5 +1,6 @@
 package com.jivesoftware.arduino.jive;
 
+import com.jivesoftware.arduino.ArduinoConnection;
 import com.jivesoftware.arduino.ListenAndSpeak;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
@@ -39,7 +40,8 @@ public class GetCustomStream extends JiveCommand {
     }
 
     public static void main(String[] args) throws Exception {
-        new GetCustomStream(new ListenAndSpeak()).execute();
+        ArduinoConnection arduinoConnection = new ArduinoConnection();
+        new GetCustomStream(new ListenAndSpeak(arduinoConnection)).execute();
     }
 
     public GetCustomStream(ListenAndSpeak listenAndSpeak) {

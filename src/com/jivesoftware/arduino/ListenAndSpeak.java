@@ -32,6 +32,8 @@ public class ListenAndSpeak {
     private final Collection<TextListener> listeners = new LinkedList<TextListener>();
     private final Deque<Say> thingsToSay = new LinkedList<Say>();
 
+    private ArduinoConnection arduinoConnection;
+
     private Thread monitorDictation;
 
     private LikeContentCommand likeContentCommand;
@@ -39,7 +41,8 @@ public class ListenAndSpeak {
     private String lastHeadline;
     private String lastDetail;
 
-    public ListenAndSpeak() throws InterruptedException {
+    public ListenAndSpeak(ArduinoConnection arduinoConnection) throws InterruptedException {
+        this.arduinoConnection = arduinoConnection;
         monitorDictation = new Thread(new Runnable() {
 
             private State was = State.STOPPED;
@@ -200,6 +203,9 @@ public class ListenAndSpeak {
                     } else {
                         speak(getVoice(), "There is nothing new");
                     }
+                } else if (text.contains("dance")) {
+                    // Read body of last news we heard from the stream
+                    dance();
                 } else {
                     System.out.println("Unrecognized text: " + text);
                     // TODO Let user know that text is not recognized
@@ -207,6 +213,39 @@ public class ListenAndSpeak {
 //                speak(Voice.VICKI, text);
             }
         });
+    }
+
+    private void dance() {
+        Random rand = new Random();
+        int posLow;
+        int posHigh;
+        try {
+            posLow = rand.nextInt(40);
+            arduinoConnection.send("op(5,"+ posLow+ ")");
+            sleepThisLong(900000000);
+            posHigh = rand.nextInt(40) + 50;
+            arduinoConnection.send("op(5,"+ posHigh+ ")");
+
+            posLow = rand.nextInt(40);
+            arduinoConnection.send("op(5,"+ posLow+ ")");
+            sleepThisLong(900000000);
+            posHigh = rand.nextInt(40) + 50;
+            arduinoConnection.send("op(5,"+ posHigh+ ")");
+
+            posLow = rand.nextInt(40);
+            arduinoConnection.send("op(5,"+ posLow+ ")");
+            sleepThisLong(900000000);
+            posHigh = rand.nextInt(40) + 50;
+            arduinoConnection.send("op(5,"+ posHigh+ ")");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sleepThisLong(int howlong) {
+        for (int i=0; i < howlong;i++) {
+            // Do nothing
+        }
     }
 
     public void start() throws InterruptedException {
@@ -373,7 +412,8 @@ public class ListenAndSpeak {
     }
 
     public static void main(String[] args) throws Exception {
-        ListenAndSpeak listenAndSpeak = new ListenAndSpeak();
+        ArduinoConnection arduinoConnection = new ArduinoConnection();
+        ListenAndSpeak listenAndSpeak = new ListenAndSpeak(arduinoConnection);
         listenAndSpeak.start();
     }
 

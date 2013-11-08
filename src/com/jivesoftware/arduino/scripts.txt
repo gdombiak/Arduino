@@ -9,3 +9,6 @@ Speak to Furby: read that
 Speak to Furby: like that
 Speak to Furby: reply that is a good idea
 Like reply from BS, Furby will dance
+
+Script 3:
+Speak to Furby: dance

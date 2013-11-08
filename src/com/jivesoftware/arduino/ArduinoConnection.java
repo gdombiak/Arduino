@@ -1,12 +1,15 @@
 package com.jivesoftware.arduino;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import gnu.io.CommPortIdentifier;
 import gnu.io.SerialPort;
 import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.util.Enumeration;
 
 /**
@@ -16,7 +19,7 @@ import java.util.Enumeration;
  *     <li><b>1</b> - Listen to command</li>
  * </ul>
  */
-public class ArduinoBrain implements SerialPortEventListener {
+public class ArduinoConnection implements SerialPortEventListener {
     SerialPort serialPort;
     /** The port we're normally going to use. */
     private static final String PORT_NAMES[] = {
@@ -89,6 +92,20 @@ public class ArduinoBrain implements SerialPortEventListener {
             serialPort.close();
         }
     }
+    public synchronized void send(String command) {
+        if (output == null) {
+            System.out.println("Arduino not detected. Failed to send command: " + command);
+            return;
+        }
+        try {
+            System.out.println("Sending command to Arduiuno: " + command);
+            output.write(command.getBytes(Charset.forName("UTF-8")));
+            output.flush();
+        } catch (IOException e) {
+            System.err.println("Error sending command to Arduino: " + e.toString());
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Handle an event on the serial port. Read the data and print it.
@@ -97,12 +114,7 @@ public class ArduinoBrain implements SerialPortEventListener {
         if (oEvent.getEventType() == SerialPortEvent.DATA_AVAILABLE) {
             try {
                 String inputLine=input.readLine();
-                System.out.println(inputLine);
-                // TODO Add here the IF statements for the codes we will read from Arduino
-                if ("1".equals(inputLine)) {
-                    // Listen to command
-                    new TFInFrame().captureText();
-                }
+                System.out.println("Furby said: " + inputLine);
             } catch (Exception e) {
                 System.err.println(e.toString());
             }
@@ -111,7 +123,7 @@ public class ArduinoBrain implements SerialPortEventListener {
     }
 
     public static void main(String[] args) throws Exception {
-        ArduinoBrain main = new ArduinoBrain();
+        ArduinoConnection main = new ArduinoConnection();
         main.initialize();
         Thread t=new Thread() {
             public void run() {
