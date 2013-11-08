@@ -27,10 +27,12 @@ public class GetCustomStream extends JiveCommand {
 
     private static final String service = api + "/streams/" + stream + "/activities";
 
-    private String lastUpdated = "";
+    private String lastTimestamp = "";
     private ListenAndSpeak listenAndSpeak;
     private Thread pollingThread;
     private final AtomicReference<Boolean> running = new AtomicReference<Boolean>(false);
+
+    private GetDirectMessages getDirectMessages;
 
     private static boolean isEd() {
         return "ed".equals(System.getProperty("username"));
@@ -42,6 +44,7 @@ public class GetCustomStream extends JiveCommand {
 
     public GetCustomStream(ListenAndSpeak listenAndSpeak) {
         this.listenAndSpeak = listenAndSpeak;
+        getDirectMessages = new GetDirectMessages(listenAndSpeak);
     }
 
     public void execute() {
@@ -57,10 +60,10 @@ public class GetCustomStream extends JiveCommand {
                     jsonObject = new JSONObject(s);
                     JSONArray list = jsonObject.getJSONArray("list");
                     JSONObject firstObject = list.getJSONObject(0);
-                    String updated = firstObject.getString("updated");
-                    if (!updated.equals(lastUpdated)) {
+                    String published = firstObject.getString("published");
+                    if (!published.equals(lastTimestamp)) {
                         // Remember last updated entry
-                        lastUpdated = updated;
+                        lastTimestamp = published;
                         // Check entry type
                         String verb = firstObject.getString("verb");
                         if ("jive:replied".equals(verb)) {
@@ -77,11 +80,9 @@ public class GetCustomStream extends JiveCommand {
                             // Say this text
                             String sayThis = user + action + object;
                             System.out.println("Got from stream: " + sayThis);
-                            ListenAndSpeak.Voice voice = isEd() ? ListenAndSpeak.Voice.BRUCE : ListenAndSpeak.Voice.TOM;
-                            listenAndSpeak.speak(voice, sayThis);
+                            listenAndSpeak.speak(getVoice(), sayThis);
 
-                        }
-                        else if ("jive:liked".equals(verb)) {
+                        } else if ("jive:liked".equals(verb)) {
                             String whatHappened = firstObject.getString("content");
 
                             Pattern pattern = Pattern.compile("(<a href[\\d\\D&&[^>]]*>)([\\d\\D&&[^<]]*)(</a>)([\\d\\D&&[^<]]*)");
@@ -93,20 +94,32 @@ public class GetCustomStream extends JiveCommand {
                             String object = matcher.group(2);
 
                             String adjective = "";
-                            JSONObject jive = firstObject.optJSONObject("jive");
-                            if (jive != null) {
-                                JSONObject parentActor = jive.optJSONObject("parentActor");
-                                if (parentActor != null) {
-                                    if (parentActor.getString("id").endsWith(isEd() ? ED_USERNAME : GATO_USERNAME)) {
+                            JSONObject activityObject2 = firstObject.optJSONObject("object");
+                            if (activityObject2 != null) {
+                                JSONObject author = activityObject2.optJSONObject("author");
+                                if (author != null) {
+                                    if (author.getString("id").endsWith(isEd() ? ED_USERNAME : GATO_USERNAME)) {
                                         // Someone liked your content
                                         adjective = "your";
-                                    }
-                                    else {
+                                    } else {
                                         // Someone liked someone else's content
-                                        adjective = parentActor.getString("displayName");
+                                        adjective = author.getString("displayName");
                                     }
                                 }
                             }
+//                            JSONObject jive = firstObject.optJSONObject("jive");
+//                            if (jive != null) {
+//                                JSONObject parentActor = jive.optJSONObject("parentActor");
+//                                if (parentActor != null) {
+//                                    if (parentActor.getString("id").endsWith(isEd() ? ED_USERNAME : GATO_USERNAME)) {
+//                                        // Someone liked your content
+//                                        adjective = "your";
+//                                    } else {
+//                                        // Someone liked someone else's content
+//                                        adjective = parentActor.getString("displayName");
+//                                    }
+//                                }
+//                            }
 
                             String contentType = "";
                             JSONObject activityObject = firstObject.optJSONObject("object");
@@ -114,11 +127,11 @@ public class GetCustomStream extends JiveCommand {
                                 String objectType = activityObject.optString("objectType");
                                 if ("jive:discussion".equals(objectType)) {
                                     contentType = " discussion ";
-                                }
-                                else if ("jive:document".equals(objectType)) {
+                                } else if ("jive:document".equals(objectType)) {
                                     contentType = " document ";
-                                }
-                                else {
+                                } else if ("jive:message".equals(objectType)) {
+                                    contentType = " reply ";
+                                } else {
                                     System.out.println("Add IF case for this objectType: " + objectType);
                                 }
                             }
@@ -126,10 +139,39 @@ public class GetCustomStream extends JiveCommand {
                             // Say this text  (eg. "Ed Venaglia likes your discussion test")
                             String sayThis = user + action + adjective + contentType + object;
                             System.out.println("Got from stream: " + sayThis);
-                            ListenAndSpeak.Voice voice = isEd() ? ListenAndSpeak.Voice.BRUCE : ListenAndSpeak.Voice.TOM;
-                            listenAndSpeak.speak(voice, sayThis);
-                        }
-                        else {
+                            listenAndSpeak.speak(getVoice(), sayThis);
+                        } else if ("jive:created".equals(verb)) {
+                            JSONObject activityObject = firstObject.optJSONObject("object");
+                            if (activityObject != null) {
+                                String objectType = activityObject.optString("objectType");
+                                if ("jive:discussion".equals(objectType)) {
+                                    // Discussion was created
+                                    boolean question = "true".equals(activityObject.optString("question"));
+                                    String subject = activityObject.getString("displayName");
+                                    String body = activityObject.getString("summary");
+                                    String actorName = firstObject.getJSONObject("actor").getString("displayName");
+                                    String contentURL = activityObject.getString("id");
+
+                                    String headline;
+                                    if (question) {
+                                        headline = actorName + " asked " + subject;
+                                    } else {
+                                        headline = actorName + " wants to discuss " + subject;
+                                    }
+                                    System.out.println("New discussion detected. Headline: " + headline + ". Summary: " + body);
+                                    LikeContentCommand likeContentCommand = new LikeContentCommand(contentURL);
+                                    ReplyDiscussion replyDiscussion = new ReplyDiscussion(contentURL);
+                                    listenAndSpeak.remember(likeContentCommand, replyDiscussion, headline, body);
+                                    listenAndSpeak.speak(getVoice(), headline);
+                                } else if ("jive:document".equals(objectType)) {
+                                    // Document was created
+                                    // TODO Implement me if we want
+                                } else {
+                                    System.out.println("Add IF case for this objectType: " + objectType);
+                                }
+                            }
+
+                        } else {
                             System.out.println("Found unexpected verb: " + verb + ". Entry: " + firstObject);
                         }
                     }
@@ -137,11 +179,17 @@ public class GetCustomStream extends JiveCommand {
                     // TODO Handle this exception
                     e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                 }
+                // Lets check now for direct messages
+                getDirectMessages.execute();
             }
         } catch (IOException e) {
             // TODO Handle this exception
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
+    }
+
+    protected ListenAndSpeak.Voice getVoice() {
+        return isEd() ? ListenAndSpeak.Voice.BRUCE : ListenAndSpeak.Voice.TOM;
     }
 
     public void start() {

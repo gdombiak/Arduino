@@ -1,0 +1,11 @@
+Script 1:
+Speak to Furby: tell gato that the quarter is looking good
+Reply from BS, Furby will read the content of the reply
+
+Script 2:
+Create discussion from BS, Furby will inform that a new discussion has started
+Speak to Furby: repeat that
+Speak to Furby: read that
+Speak to Furby: like that
+Speak to Furby: reply that is a good idea
+Like reply from BS, Furby will dance

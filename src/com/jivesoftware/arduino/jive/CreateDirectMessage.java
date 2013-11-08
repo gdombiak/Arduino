@@ -3,7 +3,6 @@ package com.jivesoftware.arduino.jive;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 
-
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.regex.Matcher;
@@ -48,7 +47,7 @@ public class CreateDirectMessage extends JiveCommand {
                     "  \"participants\" : [ \"" + username + "\" ]}";
 
 
-            // Make v3 call for creating a direct message\
+            // Make v3 call for creating a direct message
             try {
                 CloseableHttpResponse response = post(json, service);
                 int code = response.getStatusLine().getStatusCode();

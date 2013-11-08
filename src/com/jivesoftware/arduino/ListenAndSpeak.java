@@ -1,6 +1,8 @@
 package com.jivesoftware.arduino;
 
 import com.jivesoftware.arduino.jive.CreateDirectMessage;
+import com.jivesoftware.arduino.jive.LikeContentCommand;
+import com.jivesoftware.arduino.jive.ReplyCommand;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -31,6 +33,11 @@ public class ListenAndSpeak {
     private final Deque<Say> thingsToSay = new LinkedList<Say>();
 
     private Thread monitorDictation;
+
+    private LikeContentCommand likeContentCommand;
+    private ReplyCommand replyCommand;
+    private String lastHeadline;
+    private String lastDetail;
 
     public ListenAndSpeak() throws InterruptedException {
         monitorDictation = new Thread(new Runnable() {
@@ -167,11 +174,37 @@ public class ListenAndSpeak {
                 if (CreateDirectMessage.canHandle(text)) {
                     // Execute "send direct message" command
                     new CreateDirectMessage().execute(text);
+                } else if (text.contains("like")) {
+                    if (likeContentCommand != null) {
+                        likeContentCommand.execute();
+                    } else {
+                        speak(getVoice(), "There is nothing to like");
+                    }
+                } else if (text.contains("reply")) {
+                    if (replyCommand != null) {
+                        replyCommand.execute(text);
+                    } else {
+                        speak(getVoice(), "There is nothing to reply to");
+                    }
+                } else if (text.contains("repeat")) {
+                    // Repeat last headline we heard from the stream
+                    if (lastHeadline != null) {
+                        speak(getVoice(), lastHeadline);
+                    } else {
+                        speak(getVoice(), "There is nothing new");
+                    }
+                } else if (text.contains("read")) {
+                    // Read body of last news we heard from the stream
+                    if (lastDetail != null) {
+                        speak(getVoice(), lastDetail);
+                    } else {
+                        speak(getVoice(), "There is nothing new");
+                    }
                 } else {
                     System.out.println("Unrecognized text: " + text);
                     // TODO Let user know that text is not recognized
                 }
-                speak(Voice.VICKI, text);
+//                speak(Voice.VICKI, text);
             }
         });
     }
@@ -315,6 +348,13 @@ public class ListenAndSpeak {
         setState(State.SPEAKING);
     }
 
+    public void remember(LikeContentCommand likeContentCommand, ReplyCommand replyCommand, String lastHeadline, String lastDetail) {
+        this.likeContentCommand = likeContentCommand;
+        this.replyCommand = replyCommand;
+        this.lastHeadline = lastHeadline;
+        this.lastDetail = lastDetail;
+    }
+
     private void speakImpl(Say say) {
         if (say == null) {
             return;
@@ -358,4 +398,13 @@ public class ListenAndSpeak {
     public interface TextListener {
         void userSaid(String text);
     }
+
+    private static boolean isEd() {
+        return "ed".equals(System.getProperty("username"));
+    }
+
+    protected Voice getVoice() {
+        return isEd() ? ListenAndSpeak.Voice.BRUCE : ListenAndSpeak.Voice.TOM;
+    }
+
 }
