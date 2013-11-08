@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 public class CreateDirectMessage extends JiveCommand {
 
     private static final String regex = "(send a message to|tell) ([\\D\\d]*) (saying|that) ([\\D\\d]*)";
-    private static final Pattern pattern = Pattern.compile(regex);
+    private static final Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
 
     private static final String service = api + "/dms";
 
