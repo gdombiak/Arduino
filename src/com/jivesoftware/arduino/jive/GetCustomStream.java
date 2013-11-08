@@ -191,7 +191,7 @@ public class GetCustomStream extends JiveCommand {
     }
 
     protected ListenAndSpeak.Voice getVoice() {
-        return isEd() ? ListenAndSpeak.Voice.BRUCE : ListenAndSpeak.Voice.TOM;
+        return isEd() ? ListenAndSpeak.Voice.TOM : ListenAndSpeak.Voice.DIEGO;
     }
 
     public void start() {

@@ -140,7 +140,7 @@ public class ListenAndSpeak {
         frame = new JFrame();
 
 
-        frame.setUndecorated(true);
+//        frame.setUndecorated(true);
         frame.getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
         // Set the style of the frame
         textArea = new JTextField("", 100);
@@ -174,6 +174,7 @@ public class ListenAndSpeak {
             @Override
             public void userSaid(String text) {
                 System.out.println("I heard: " + text);
+                text = text.toLowerCase();
                 if (CreateDirectMessage.canHandle(text)) {
                     // Execute "send direct message" command
                     new CreateDirectMessage().execute(text);
@@ -398,7 +399,7 @@ public class ListenAndSpeak {
         if (say == null) {
             return;
         }
-        runCommand("/usr/bin/say", "-v", say.voice.toString(), "-r", "200", say.text);
+        runCommand("/usr/bin/say", "-v", say.voice.toString(), "-r", "160", say.text);
     }
 
     public void setState(State state) {
@@ -422,7 +423,7 @@ public class ListenAndSpeak {
     }
 
     public enum Voice {
-        VICKI, TOM, BRUCE
+        VICKI, TOM, BRUCE, DIEGO
     }
 
     private static class Say {
