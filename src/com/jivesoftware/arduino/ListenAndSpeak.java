@@ -1,0 +1,361 @@
+package com.jivesoftware.arduino;
+
+import com.jivesoftware.arduino.jive.CreateDirectMessage;
+
+import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+
+/**
+ * User: ed
+ * Date: 11/4/13
+ * Time: 10:11 PM
+ */
+public class ListenAndSpeak {
+
+    private static long STABLE_WAIT_MS = 2500L;
+//    private static long SILENCE_TIMEOUT_MS = 12000L;
+
+    private static String START_DICT = "tell application \"System Events\" to keystroke \"d\" using {shift down, option down, command down}";
+
+    private final JTextField textArea;
+
+    private final AtomicReference<State> state = new AtomicReference<State>(State.STOPPED);
+    private final JFrame frame;
+    private final Collection<TextListener> listeners = new LinkedList<TextListener>();
+    private final Deque<Say> thingsToSay = new LinkedList<Say>();
+
+    private Thread monitorDictation;
+
+    public ListenAndSpeak() throws InterruptedException {
+        monitorDictation = new Thread(new Runnable() {
+
+            private State was = State.STOPPED;
+            private boolean checkedForTerminal = false;
+            private String previousValue = "";
+            private long lastChange = 0L;
+
+            @Override
+            public void run() {
+                while (state.get() != State.STOPPED) {
+                    processState();
+                }
+            }
+
+            private void processState() {
+                State state = ListenAndSpeak.this.state.get();
+                boolean newState = state != was;
+                switch (state) {
+                    case IDLE:
+                        if (was == State.LISTENING) {
+                            stopDictation();
+                        }
+                        previousValue = "";
+                        synchronized (ListenAndSpeak.this.state) {
+                            try {
+                                ListenAndSpeak.this.state.wait(2500L);
+                            } catch (InterruptedException e) {
+                                Thread.interrupted();
+                            }
+                        }
+                        break;
+                    case SPEAKING:
+                        if (was == State.LISTENING) {
+                            stopDictation();
+                        }
+                        Say say = null;
+                        synchronized (thingsToSay) {
+                            if (!thingsToSay.isEmpty()) {
+                                say = thingsToSay.pollFirst();
+                            }
+                        }
+                        if (say != null) {
+                            speakImpl(say);
+                        }
+                        try {
+                            Thread.sleep(250L);
+                        } catch (InterruptedException e) {
+                            Thread.interrupted();
+                        }
+                        boolean empty;
+                        synchronized (thingsToSay) {
+                            empty = thingsToSay.isEmpty();
+                        }
+                        if (empty) {
+                            setState(State.IDLE);
+                            startDictation();
+                        }
+                        break;
+                    case LISTENING:
+                        if (newState) {
+                            previousValue = textArea.getText();
+                            lastChange = System.currentTimeMillis();
+                            checkedForTerminal = false;
+                        }
+                        try {
+                            Thread.sleep(100L);
+                        } catch (InterruptedException e) {
+                            Thread.interrupted();
+                        }
+                        String v = textArea.getText().trim();
+                        if (previousValue.equals(v)) {
+                            long elapsed = System.currentTimeMillis() - lastChange;
+                            if (elapsed >= STABLE_WAIT_MS && !checkedForTerminal) {
+                                clearTextBox();
+                                previousValue = "";
+                                checkedForTerminal = true;
+                                try {
+                                    notifyListeners(v);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+//                            } else if (elapsed > SILENCE_TIMEOUT_MS) {
+//                                stopDictation();
+                            }
+                        } else {
+                            previousValue = v;
+                            lastChange = System.currentTimeMillis();
+                            checkedForTerminal = false;
+                        }
+                        break;
+                }
+                was = state;
+            }
+        }, "Monitor Dictation");
+        frame = new JFrame();
+
+
+        frame.setUndecorated(true);
+        frame.getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
+        // Set the style of the frame
+        textArea = new JTextField("", 100);
+
+        textArea.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                monitorDictation.interrupt();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                monitorDictation.interrupt();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                monitorDictation.interrupt();
+            }
+        });
+
+        frame.add(textArea);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setResizable(false);
+        frame.setLayout(new FlowLayout());
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+
+        addListener(new TextListener() {
+            @Override
+            public void userSaid(String text) {
+                System.out.println("I heard: " + text);
+                if (CreateDirectMessage.canHandle(text)) {
+                    // Execute "send direct message" command
+                    new CreateDirectMessage().execute(text);
+                } else {
+                    System.out.println("Unrecognized text: " + text);
+                    // TODO Let user know that text is not recognized
+                }
+                speak(Voice.VICKI, text);
+            }
+        });
+    }
+
+    public void start() throws InterruptedException {
+        setState(State.IDLE);
+        monitorDictation.start();
+    }
+
+    private void startDictation() {
+        if (state.get() == State.IDLE) {
+            if (textArea.isFocusOwner()) {
+                runScript(START_DICT);
+                setState(State.LISTENING);
+            } else {
+                final FocusAdapter listener = new FocusAdapter() {
+                    @Override
+                    public synchronized void focusGained(FocusEvent e) {
+                        textArea.removeFocusListener(this);
+                        notifyAll();
+                    }
+                };
+                //noinspection SynchronizationOnLocalVariableOrMethodParameter
+                synchronized (listener) {
+                    frame.requestFocus();
+                    textArea.addFocusListener(listener);
+                    textArea.requestFocus();
+                    try {
+                        listener.wait(2500L);
+                    } catch (InterruptedException e) {
+                        Thread.interrupted();
+                    }
+                    if (state.get() == State.IDLE) {
+                        runScript(START_DICT);
+                        setState(State.LISTENING);
+                    }
+                }
+            }
+        }
+    }
+
+    public void stopDictation() {
+        runScript(START_DICT);
+//        runCommand("/usr/bin/say", ".");
+//        try {
+//            Thread.sleep(250L);
+//        } catch (InterruptedException e) {
+//            Thread.interrupted();
+//        }
+    }
+
+    private void runScript(String script) {
+        clearTextBox();
+        String[] lines = script.split("\n");
+        String[] args = new String[lines.length * 2 + 1];
+        args[0] = "/usr/bin/osascript";
+        for (int i = 0, j = 1, l = lines.length; i < l; i++, j += 2) {
+            args[j] = "-e";
+            args[j + 1] = lines[i];
+        }
+        runCommand(args);
+    }
+
+    private void runCommand(String... args) {
+        System.out.println("Running script: " + Arrays.asList(args));
+        if (System.getProperty("noCommand") == null) {
+            // Execute the command since we are on Mac OS
+            Process process;
+            try {
+                Runtime runtime = Runtime.getRuntime();
+                process = runtime.exec(args);
+                while (true) {
+                    try {
+                        process.waitFor();
+                        break;
+                    } catch (InterruptedException e) {
+                        Thread.interrupted();
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Script finished: exit code = " + process.exitValue());
+        }
+    }
+
+    private void clearTextBox() {
+        boolean retry;
+        do {
+            retry = false;
+            try {
+                textArea.setText("");
+            } catch (ThreadDeath td) {
+                throw td;
+            } catch (Error e) {
+                if ("Interrupted attempt to aquire write lock".equals(e.getMessage())) {
+                    retry = true;
+                } else {
+                    throw e;
+                }
+            }
+        } while (retry);
+    }
+
+    private void notifyListeners(String text) {
+        if (text == null || text.length() == 0) {
+            return;
+        }
+        Collection<TextListener> clone;
+        synchronized (listeners) {
+            clone = new ArrayList<TextListener>(listeners);
+        }
+        for (TextListener listener : clone) {
+            try {
+                listener.userSaid(text);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void addListener(TextListener listener) {
+        synchronized (listeners) {
+            listeners.add(listener);
+        }
+    }
+
+    public void removeListener(TextListener listener) {
+        synchronized (listeners) {
+            listeners.remove(listener);
+        }
+    }
+
+    public void speak(Voice voice, String text) {
+        if (text == null || voice == null || text.length() == 0) {
+            return;
+        }
+        synchronized (thingsToSay) {
+            thingsToSay.add(new Say(voice, text));
+        }
+        setState(State.SPEAKING);
+    }
+
+    private void speakImpl(Say say) {
+        if (say == null) {
+            return;
+        }
+        runCommand("/usr/bin/say", "-v", say.voice.toString(), "-r", "200", say.text);
+    }
+
+    public void setState(State state) {
+        State previouState = this.state.getAndSet(state);
+        if (previouState != state) {
+            System.out.println("Changing state: " + previouState + " -> " + state);
+            synchronized (this.state) {
+                this.state.notify();
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        ListenAndSpeak listenAndSpeak = new ListenAndSpeak();
+        listenAndSpeak.start();
+    }
+
+    private enum State {
+        IDLE, LISTENING, SPEAKING, STOPPED
+    }
+
+    public enum Voice {
+        VICKI, TOM, BRUCE
+    }
+
+    private static class Say {
+        final Voice voice;
+        final String text;
+
+        private Say(Voice voice, String text) {
+            this.voice = voice;
+            this.text = text;
+        }
+    }
+
+    public interface TextListener {
+        void userSaid(String text);
+    }
+}
