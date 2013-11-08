@@ -41,11 +41,11 @@ public abstract class JiveCommand {
 
     protected String getUsername(String user) {
         String username = api + "/people/";
-        if ("ed".equals(user)) {
+        if ("ed".equalsIgnoreCase(user)) {
             username += ED_USERNAME;
-        } else if ("gato".equals(user)) {
+        } else if ("gato".equalsIgnoreCase(user) || "fred".equalsIgnoreCase(user)) {
             username += GATO_USERNAME;
-        } else if ("craig".equals(user)) {
+        } else if ("craig".equalsIgnoreCase(user)) {
             username += "2890";
         }
         return username;
