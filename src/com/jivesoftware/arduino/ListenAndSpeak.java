@@ -177,7 +177,7 @@ public class ListenAndSpeak {
                 text = text.toLowerCase();
                 if (CreateDirectMessage.canHandle(text)) {
                     // Execute "send direct message" command
-                    new CreateDirectMessage().execute(text);
+                    new CreateDirectMessage(ListenAndSpeak.this).execute(text);
                 } else if (text.contains("like")) {
                     if (likeContentCommand != null) {
                         likeContentCommand.execute();

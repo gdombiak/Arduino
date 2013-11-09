@@ -1,5 +1,6 @@
 package com.jivesoftware.arduino.jive;
 
+import com.jivesoftware.arduino.ListenAndSpeak;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 
@@ -22,6 +23,8 @@ public class CreateDirectMessage extends JiveCommand {
 
     private static final String service = api + "/dms";
 
+    private ListenAndSpeak listenAndSpeak;
+
     /**
      * Returns true if the provided text can be handled by this class.
      *
@@ -30,6 +33,10 @@ public class CreateDirectMessage extends JiveCommand {
      */
     public static boolean canHandle(String rawText) {
         return pattern.matcher(rawText).find();
+    }
+
+    public CreateDirectMessage(ListenAndSpeak listenAndSpeak) {
+        this.listenAndSpeak = listenAndSpeak;
     }
 
     public void execute(String rawText) {
@@ -52,9 +59,11 @@ public class CreateDirectMessage extends JiveCommand {
                 CloseableHttpResponse response = post(json, service);
                 int code = response.getStatusLine().getStatusCode();
                 if (code ==  HttpURLConnection.HTTP_CREATED) {
-                    // TODO Let user know that message was sent
+                    // Let user know that message was sent
+                    listenAndSpeak.speak(getVoice(), "Message has been sent");
                 } else {
-                    // TODO Let user know that there was an error sending the message
+                    // Let user know that there was an error sending the message
+                    listenAndSpeak.speak(getVoice(), "Failed to send message");
                     System.out.println("Error: " + code + " - " + EntityUtils.toString(response.getEntity()));
                 }
             } catch (IOException e) {
@@ -67,4 +76,13 @@ public class CreateDirectMessage extends JiveCommand {
         }
 
     }
+
+    private static boolean isEd() {
+        return "ed".equals(System.getProperty("username"));
+    }
+
+    protected ListenAndSpeak.Voice getVoice() {
+        return isEd() ? ListenAndSpeak.Voice.TOM : ListenAndSpeak.Voice.DIEGO;
+    }
+
 }

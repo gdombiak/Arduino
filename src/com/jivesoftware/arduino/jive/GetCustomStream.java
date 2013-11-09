@@ -161,8 +161,8 @@ public class GetCustomStream extends JiveCommand {
                                         headline = actorName + " wants to discuss " + subject;
                                     }
                                     System.out.println("New discussion detected. Headline: " + headline + ". Summary: " + body);
-                                    LikeContentCommand likeContentCommand = new LikeContentCommand(contentURL);
-                                    ReplyDiscussion replyDiscussion = new ReplyDiscussion(contentURL);
+                                    LikeContentCommand likeContentCommand = new LikeContentCommand(listenAndSpeak, contentURL);
+                                    ReplyDiscussion replyDiscussion = new ReplyDiscussion(listenAndSpeak, contentURL);
                                     listenAndSpeak.remember(likeContentCommand, replyDiscussion, headline, body);
                                     listenAndSpeak.speak(getVoice(), headline);
                                 } else if ("jive:document".equals(objectType)) {
