@@ -225,41 +225,40 @@ public class ListenAndSpeak {
     }
 
     private void dance() {
-        arduinoConnection.send("op(6,0)");
+        new Thread(new Runnable() {
+            public void run() {
+                arduinoConnection.send("op(6,0)");
 
-        Random rand = new Random();
-        int posLow;
-        int posHigh;
-        try {
-            posLow = rand.nextInt(40);
-            arduinoConnection.send("op(5,"+ posLow+ ")");
-            sleepThisLong(1500000000);
-            posHigh = rand.nextInt(40) + 50;
-            arduinoConnection.send("op(5,"+ posHigh+ ")");
+                Random rand = new Random();
+                int posLow;
+                int posHigh;
+                try {
+                    posLow = rand.nextInt(40);
+                    arduinoConnection.send("op(5,"+ posLow+ ")");
+                    Thread.sleep(350);
+                    posHigh = rand.nextInt(40) + 50;
+                    arduinoConnection.send("op(5,"+ posHigh+ ")");
 
-            posLow = rand.nextInt(40);
-            arduinoConnection.send("op(5,"+ posLow+ ")");
-            sleepThisLong(1500000000);
-            posHigh = rand.nextInt(40) + 50;
-            arduinoConnection.send("op(5,"+ posHigh+ ")");
+                    posLow = rand.nextInt(40);
+                    arduinoConnection.send("op(5,"+ posLow+ ")");
+                    Thread.sleep(350);
+                    posHigh = rand.nextInt(40) + 50;
+                    arduinoConnection.send("op(5,"+ posHigh+ ")");
 
-            posLow = rand.nextInt(40);
-            arduinoConnection.send("op(5,"+ posLow+ ")");
-            sleepThisLong(1500000000);
-            posHigh = rand.nextInt(40) + 50;
-            arduinoConnection.send("op(5,"+ posHigh+ ")");
+                    posLow = rand.nextInt(40);
+                    arduinoConnection.send("op(5,"+ posLow+ ")");
+                    Thread.sleep(350);
+                    posHigh = rand.nextInt(40) + 50;
+                    arduinoConnection.send("op(5,"+ posHigh+ ")");
 
-            sleepThisLong(1500000000);
-            arduinoConnection.send("op(6,1)");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void sleepThisLong(int howlong) {
-        for (int i=0; i < howlong;i++) {
-            // Do nothing
-        }
+                    Thread.sleep(350);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    arduinoConnection.send("op(6,1)");
+                }
+            }
+        }, "Dance").start();
     }
 
     public void start() throws InterruptedException {

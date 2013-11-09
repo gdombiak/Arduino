@@ -6,9 +6,9 @@ import gnu.io.SerialPortEvent;
 import gnu.io.SerialPortEventListener;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.util.Enumeration;
 
@@ -36,7 +36,7 @@ public class ArduinoConnection implements SerialPortEventListener {
      */
     private BufferedReader input;
     /** The output stream to the port */
-    private OutputStream output;
+    private PrintWriter output;
     /** Milliseconds to block while waiting for port open */
     private static final int TIME_OUT = 2000;
     /** Default bits per second for COM port. */
@@ -73,8 +73,8 @@ public class ArduinoConnection implements SerialPortEventListener {
                     SerialPort.PARITY_NONE);
 
             // open the streams
-            input = new BufferedReader(new InputStreamReader(serialPort.getInputStream()));
-            output = serialPort.getOutputStream();
+            input = new BufferedReader(new InputStreamReader(serialPort.getInputStream(), Charset.forName("US-ASCII")));
+            output = new PrintWriter(new OutputStreamWriter(serialPort.getOutputStream(), Charset.forName("US-ASCII")));
 
             // add event listeners
             serialPort.addEventListener(this);
@@ -99,14 +99,10 @@ public class ArduinoConnection implements SerialPortEventListener {
             System.out.println("Arduino not detected. Failed to send command: " + command);
             return;
         }
-        try {
-            System.out.println("Sending command to Arduiuno: " + command);
-            output.write(command.getBytes(Charset.forName("UTF-8")));
-            output.flush();
-        } catch (IOException e) {
-            System.err.println("Error sending command to Arduino: " + e.toString());
-            e.printStackTrace();
-        }
+        System.out.println("Sending command to Arduiuno: " + command);
+        output.write(command);
+        output.write('\n');
+        output.flush();
     }
 
     /**
