@@ -50,6 +50,12 @@ public class GetDirectMessages extends JiveCommand {
                         // Remember last updated entry
                         lastTimestamp = published;
 
+                        String actorURI = firstObject.getJSONObject("actor").getString("id");
+                        if (actorURI.equals(getUsername(isEd() ? "ed" : "gato"))) {
+                            // Ignore messages sent by the logged user
+                            return;
+                        }
+
                         String whatHappened = firstObject.getString("content");
                         Pattern pattern = Pattern.compile("(<a href[\\d\\D&&[^>]]*>)([\\d\\D&&[^<]]*)(</a>)([\\d\\D&&[^<]]*)");
                         Matcher matcher = pattern.matcher(whatHappened);
