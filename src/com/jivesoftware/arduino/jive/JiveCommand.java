@@ -1,5 +1,6 @@
 package com.jivesoftware.arduino.jive;
 
+import com.jivesoftware.arduino.ListenAndSpeak;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -80,5 +81,13 @@ public abstract class JiveCommand {
 
         return httpclient.execute(request, httpContext);
 
+    }
+
+    protected static boolean isEd() {
+        return "ed".equals(System.getProperty("username"));
+    }
+
+    final protected ListenAndSpeak.Voice getVoice() {
+        return isEd() ? ListenAndSpeak.Voice.TOM : ListenAndSpeak.Voice.DIEGO;
     }
 }

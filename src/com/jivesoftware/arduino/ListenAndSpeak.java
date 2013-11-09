@@ -168,6 +168,14 @@ public class ListenAndSpeak {
         frame.setLayout(new FlowLayout());
         frame.pack();
         frame.setLocationRelativeTo(null);
+        frame.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (state.compareAndSet(State.LISTENING, State.IDLE)) {
+                    startDictation();
+                }
+            }
+        });
         frame.setVisible(true);
 
         addListener(new TextListener() {

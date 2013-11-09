@@ -35,10 +35,6 @@ public class GetCustomStream extends JiveCommand {
 
     private GetDirectMessages getDirectMessages;
 
-    private static boolean isEd() {
-        return "ed".equals(System.getProperty("username"));
-    }
-
     public static void main(String[] args) throws Exception {
         ArduinoConnection arduinoConnection = new ArduinoConnection();
         new GetCustomStream(new ListenAndSpeak(arduinoConnection)).execute();
@@ -188,10 +184,6 @@ public class GetCustomStream extends JiveCommand {
             // TODO Handle this exception
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
-    }
-
-    protected ListenAndSpeak.Voice getVoice() {
-        return isEd() ? ListenAndSpeak.Voice.TOM : ListenAndSpeak.Voice.DIEGO;
     }
 
     public void start() {

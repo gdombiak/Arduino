@@ -43,12 +43,4 @@ public class LikeContentCommand extends JiveCommand {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
     }
-
-    private static boolean isEd() {
-        return "ed".equals(System.getProperty("username"));
-    }
-
-    protected ListenAndSpeak.Voice getVoice() {
-        return isEd() ? ListenAndSpeak.Voice.TOM : ListenAndSpeak.Voice.DIEGO;
-    }
 }

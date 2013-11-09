@@ -75,10 +75,4 @@ public class GetDirectMessages extends JiveCommand {
         }
     }
 
-    private static boolean isEd() {
-        return "ed".equals(System.getProperty("username"));
-    }
-    protected ListenAndSpeak.Voice getVoice() {
-        return isEd() ? ListenAndSpeak.Voice.BRUCE : ListenAndSpeak.Voice.TOM;
-    }
 }

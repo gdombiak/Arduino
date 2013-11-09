@@ -52,11 +52,4 @@ public class ReplyDiscussion extends ReplyCommand {
         }
     }
 
-    private static boolean isEd() {
-        return "ed".equals(System.getProperty("username"));
-    }
-
-    protected ListenAndSpeak.Voice getVoice() {
-        return isEd() ? ListenAndSpeak.Voice.TOM : ListenAndSpeak.Voice.DIEGO;
-    }
 }
