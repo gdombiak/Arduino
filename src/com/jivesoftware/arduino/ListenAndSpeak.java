@@ -225,27 +225,32 @@ public class ListenAndSpeak {
     }
 
     private void dance() {
+        arduinoConnection.send("op(6,0)");
+
         Random rand = new Random();
         int posLow;
         int posHigh;
         try {
             posLow = rand.nextInt(40);
             arduinoConnection.send("op(5,"+ posLow+ ")");
-            sleepThisLong(900000000);
+            sleepThisLong(1500000000);
             posHigh = rand.nextInt(40) + 50;
             arduinoConnection.send("op(5,"+ posHigh+ ")");
 
             posLow = rand.nextInt(40);
             arduinoConnection.send("op(5,"+ posLow+ ")");
-            sleepThisLong(900000000);
+            sleepThisLong(1500000000);
             posHigh = rand.nextInt(40) + 50;
             arduinoConnection.send("op(5,"+ posHigh+ ")");
 
             posLow = rand.nextInt(40);
             arduinoConnection.send("op(5,"+ posLow+ ")");
-            sleepThisLong(900000000);
+            sleepThisLong(1500000000);
             posHigh = rand.nextInt(40) + 50;
             arduinoConnection.send("op(5,"+ posHigh+ ")");
+
+            sleepThisLong(1500000000);
+            arduinoConnection.send("op(6,1)");
         } catch (Exception e) {
             e.printStackTrace();
         }
