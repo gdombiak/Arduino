@@ -168,7 +168,7 @@ public class ListenAndSpeak {
         frame.setLayout(new FlowLayout());
         frame.pack();
         frame.setLocationRelativeTo(null);
-        frame.addFocusListener(new FocusAdapter() {
+        textArea.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
                 if (state.compareAndSet(State.LISTENING, State.IDLE)) {
