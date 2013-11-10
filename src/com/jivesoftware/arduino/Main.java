@@ -2,6 +2,8 @@ package com.jivesoftware.arduino;
 
 import com.jivesoftware.arduino.jive.GetCustomStream;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * System properties:
  * <ul>
@@ -13,10 +15,22 @@ import com.jivesoftware.arduino.jive.GetCustomStream;
 public class Main {
 
     public static void main(String[] args) throws Exception {
+        AtomicBoolean enabled = new AtomicBoolean(true);
         ArduinoConnection arduinoConnection = new ArduinoConnection();
-        ListenAndSpeak listenAndSpeak = new ListenAndSpeak(arduinoConnection);
+        final ListenAndSpeak listenAndSpeak = new ListenAndSpeak(arduinoConnection);
         GetCustomStream streamCommand = new GetCustomStream(listenAndSpeak);
         arduinoConnection.initialize();
+        arduinoConnection.addListener(new FurbyButtonAdapter(FurbyButtonListener.Button.LIGHT) {
+            @Override
+            public void buttonDown(Button button) {
+                listenAndSpeak.stop();
+            }
+
+            @Override
+            public void buttonUp(Button button) {
+                listenAndSpeak.start();
+            }
+        });
         listenAndSpeak.start();
         streamCommand.start();
     }

@@ -27,7 +27,7 @@ public class ReplyDiscussion extends ReplyCommand {
 
     @Override
     public void execute(String rawText) {
-        rawText = rawText.replaceFirst("reply ", "");
+        rawText = rawText.replaceFirst("(?i)reply ", "");
         String json = "{\"type\" : \"message\",\n" +
                 "  \"content\" : {\n" +
                 "    \"type\" : \"text/html\",\n" +

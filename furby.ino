@@ -397,9 +397,9 @@ void loop() {
       camGoto(15);
     }
     if (light_sw_state) {
-      light_sw_state = analogRead(A1) > 200;
+      light_sw_state = analogRead(A1) > 150;
     } else {
-      light_sw_state = analogRead(A1) > 300;
+      light_sw_state = analogRead(A1) > 250;
     }
     return;
   }

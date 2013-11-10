@@ -10,8 +10,13 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.io.File;
+import java.net.URL;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * User: ed
@@ -25,6 +30,8 @@ public class ListenAndSpeak {
 
     private static String START_DICT = "tell application \"System Events\" to keystroke \"d\" using {shift down, option down, command down}";
 
+    private static final Pattern MATCH_SWITCH = Pattern.compile("sw\\((belly|tongue|light)\\)=(0|1)");
+
     private final JTextField textArea;
 
     private final AtomicReference<State> state = new AtomicReference<State>(State.STOPPED);
@@ -33,6 +40,7 @@ public class ListenAndSpeak {
     private final Deque<Say> thingsToSay = new LinkedList<Say>();
 
     private ArduinoConnection arduinoConnection;
+    private AtomicBoolean enabled;
 
     private Thread monitorDictation;
 
@@ -43,6 +51,7 @@ public class ListenAndSpeak {
 
     public ListenAndSpeak(ArduinoConnection arduinoConnection) throws InterruptedException {
         this.arduinoConnection = arduinoConnection;
+        this.enabled = new AtomicBoolean(true);
         monitorDictation = new Thread(new Runnable() {
 
             private State was = State.STOPPED;
@@ -86,11 +95,22 @@ public class ListenAndSpeak {
                         }
                         if (say != null) {
                             speakImpl(say);
+                            if (say.runAfter != null) {
+                                try {
+                                    say.runAfter.run();
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
                         }
                         try {
                             Thread.sleep(250L);
                         } catch (InterruptedException e) {
                             Thread.interrupted();
+                        }
+                        if (!ListenAndSpeak.this.enabled.get()) {
+                            setState(State.IDLE);
+                            break;
                         }
                         boolean empty;
                         synchronized (thingsToSay) {
@@ -124,13 +144,15 @@ public class ListenAndSpeak {
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
-//                            } else if (elapsed > SILENCE_TIMEOUT_MS) {
-//                                stopDictation();
                             }
                         } else {
                             previousValue = v;
                             lastChange = System.currentTimeMillis();
                             checkedForTerminal = false;
+                        }
+                        if (!ListenAndSpeak.this.enabled.get()) {
+                            setState(State.IDLE);
+                            break;
                         }
                         break;
                 }
@@ -163,7 +185,7 @@ public class ListenAndSpeak {
         });
 
         frame.add(textArea);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setResizable(false);
         frame.setLayout(new FlowLayout());
         frame.pack();
@@ -182,37 +204,37 @@ public class ListenAndSpeak {
             @Override
             public void userSaid(String text) {
                 System.out.println("I heard: " + text);
-                text = text.toLowerCase();
-                if (CreateDirectMessage.canHandle(text)) {
+                String textLowerCase = text.toLowerCase();
+                if (CreateDirectMessage.canHandle(textLowerCase)) {
                     // Execute "send direct message" command
                     new CreateDirectMessage(ListenAndSpeak.this).execute(text);
-                } else if (text.contains("like")) {
+                } else if (textLowerCase.contains("like")) {
                     if (likeContentCommand != null) {
                         likeContentCommand.execute();
                     } else {
                         speak(getVoice(), "There is nothing to like");
                     }
-                } else if (text.contains("reply")) {
+                } else if (textLowerCase.contains("reply")) {
                     if (replyCommand != null) {
                         replyCommand.execute(text);
                     } else {
                         speak(getVoice(), "There is nothing to reply to");
                     }
-                } else if (text.contains("repeat")) {
+                } else if (textLowerCase.contains("repeat")) {
                     // Repeat last headline we heard from the stream
                     if (lastHeadline != null) {
                         speak(getVoice(), lastHeadline);
                     } else {
                         speak(getVoice(), "There is nothing new");
                     }
-                } else if (text.contains("read")) {
+                } else if (textLowerCase.contains("read")) {
                     // Read body of last news we heard from the stream
                     if (lastDetail != null) {
                         speak(getVoice(), lastDetail);
                     } else {
                         speak(getVoice(), "There is nothing new");
                     }
-                } else if (text.contains("dance")) {
+                } else if (textLowerCase.contains("dance")) {
                     // Read body of last news we heard from the stream
                     dance();
                 } else {
@@ -222,48 +244,93 @@ public class ListenAndSpeak {
 //                speak(Voice.VICKI, text);
             }
         });
+        arduinoConnection.addListener(new FurbyButtonAdapter(FurbyButtonListener.Button.BELLY) {
+
+            private long lastTickle = 0L;
+
+            @Override
+            public void buttonDown(Button button) {
+                long now = System.currentTimeMillis();
+                if (now - lastTickle > 15000L) {
+                    lastTickle = now;
+                    play(ListenAndSpeak.AudioClip.LAUGH);
+                }
+            }
+        });
     }
 
     private void dance() {
-        new Thread(new Runnable() {
-            public void run() {
-                arduinoConnection.send("op(6,0)");
-
-                Random rand = new Random();
-                int posLow;
-                int posHigh;
-                try {
-                    posLow = rand.nextInt(40);
-                    arduinoConnection.send("op(5,"+ posLow+ ")");
-                    Thread.sleep(350);
-                    posHigh = rand.nextInt(40) + 50;
-                    arduinoConnection.send("op(5,"+ posHigh+ ")");
-
-                    posLow = rand.nextInt(40);
-                    arduinoConnection.send("op(5,"+ posLow+ ")");
-                    Thread.sleep(350);
-                    posHigh = rand.nextInt(40) + 50;
-                    arduinoConnection.send("op(5,"+ posHigh+ ")");
-
-                    posLow = rand.nextInt(40);
-                    arduinoConnection.send("op(5,"+ posLow+ ")");
-                    Thread.sleep(350);
-                    posHigh = rand.nextInt(40) + 50;
-                    arduinoConnection.send("op(5,"+ posHigh+ ")");
-
-                    Thread.sleep(350);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    arduinoConnection.send("op(6,1)");
-                }
-            }
-        }, "Dance").start();
+        play(AudioClip.DANCE);
+//        if (!enabled.get()) {
+//            return;
+//        }
+//        new Thread(new Runnable() {
+//            public void run() {
+//                arduinoConnection.send("op(6,0)");
+//
+//                Random rand = new Random();
+//                int posLow;
+//                int posHigh;
+//                try {
+//                    posLow = rand.nextInt(40);
+//                    arduinoConnection.send("op(5,"+ posLow+ ")");
+//                    Thread.sleep(350);
+//                    posHigh = rand.nextInt(40) + 50;
+//                    arduinoConnection.send("op(5,"+ posHigh+ ")");
+//
+//                    posLow = rand.nextInt(40);
+//                    arduinoConnection.send("op(5,"+ posLow+ ")");
+//                    Thread.sleep(350);
+//                    posHigh = rand.nextInt(40) + 50;
+//                    arduinoConnection.send("op(5,"+ posHigh+ ")");
+//
+//                    posLow = rand.nextInt(40);
+//                    arduinoConnection.send("op(5,"+ posLow+ ")");
+//                    Thread.sleep(350);
+//                    posHigh = rand.nextInt(40) + 50;
+//                    arduinoConnection.send("op(5,"+ posHigh+ ")");
+//
+//                    Thread.sleep(350);
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                } finally {
+//                    arduinoConnection.send("op(6,1)");
+//                }
+//            }
+//        }, "Dance").start();
     }
 
-    public void start() throws InterruptedException {
+    public void start() {
         setState(State.IDLE);
-        monitorDictation.start();
+        if (!monitorDictation.isAlive()) {
+            monitorDictation.start();
+            startDictation();
+        } else {
+            enabled.set(true);
+            play(AudioClip.WAKING_UP);
+            setState(State.SPEAKING);
+        }
+    }
+
+    public void stop() {
+        AudioClip audioClip = AudioClip.SLEEPY_TIME;
+        File audioFile = audioClip.getFile();
+        if (audioFile == null || !audioFile.exists() || audioFile.length() == 0) {
+            enabled.set(false);
+            setState(State.IDLE);
+            return;
+        }
+        synchronized (thingsToSay) {
+            thingsToSay.clear();
+            thingsToSay.add(new Say(null, audioFile.getAbsolutePath(), new Runnable() {
+                @Override
+                public void run() {
+                    enabled.set(false);
+                    setState(State.IDLE);
+                }
+            }));
+        }
+        setState(State.SPEAKING);
     }
 
     private void startDictation() {
@@ -390,8 +457,19 @@ public class ListenAndSpeak {
         }
     }
 
+    public void play(AudioClip audioClip) {
+        File audioFile = audioClip == null ? null : audioClip.getFile();
+        if (!enabled.get() || audioFile == null || !audioFile.exists() || audioFile.length() == 0) {
+            return;
+        }
+        synchronized (thingsToSay) {
+            thingsToSay.add(new Say(null, audioFile.getAbsolutePath()));
+        }
+        setState(State.SPEAKING);
+    }
+
     public void speak(Voice voice, String text) {
-        if (text == null || voice == null || text.length() == 0) {
+        if (!enabled.get() || text == null || voice == null || text.length() == 0) {
             return;
         }
         synchronized (thingsToSay) {
@@ -411,7 +489,11 @@ public class ListenAndSpeak {
         if (say == null) {
             return;
         }
-        runCommand("/usr/bin/say", "-v", say.voice.toString(), "-r", "160", say.text);
+        if (say.voice != null) {
+            runCommand("/usr/bin/say", "-v", say.voice.toString(), "-r", "160", say.text);
+        } else {
+            runCommand("/usr/bin/afplay", say.text);
+        }
     }
 
     public void setState(State state) {
@@ -438,18 +520,39 @@ public class ListenAndSpeak {
         VICKI, TOM, BRUCE, DIEGO
     }
 
-    private static class Say {
-        final Voice voice;
-        final String text;
+    public enum AudioClip {
+        WAKING_UP("cock-a-doodle-doo.aif"),
+        DANCE("dance-boogie.aif"),
+        LAUGH("he-he-he-tickle.aif"),
+        SLEEPY_TIME("yawn-snore.aif");
 
-        private Say(Voice voice, String text) {
-            this.voice = voice;
-            this.text = text;
+        private final File file;
+
+        AudioClip(String name) {
+            URL resource = getClass().getClassLoader().getResource(name);
+            String fileName = resource == null ? null : resource.getFile();
+            file = fileName == null ? null : new File(fileName);
+        }
+
+        public File getFile() {
+            return file;
         }
     }
 
-    public interface TextListener {
-        void userSaid(String text);
+    private static class Say {
+        final Voice voice;
+        final String text;
+        final Runnable runAfter;
+
+        private Say(Voice voice, String text) {
+            this(voice, text, null);
+        }
+
+        private Say(Voice voice, String text, Runnable runAfter) {
+            this.voice = voice;
+            this.text = text;
+            this.runAfter = runAfter;
+        }
     }
 
     private static boolean isEd() {
