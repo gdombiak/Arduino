@@ -1,0 +1,32 @@
+SP Speaker (2x)
+BS Belly Switch (2x)
+
+M+ Motor +
+M- Motor -
+L+ LED +
+L- LED -
+P+ Photo Transistor +
+P- Photo Transistor -
+HS Home Switch (2x)
+
+TS Tongue Switch (2x)
+
+
+
+Adruino pins
+
+A0 audio in
+
+2 photo interrupter (50K pull-up)
+3 home switch (50k pull-up)
+4 motor +
+5 motor -
+6 motor pwm
+7 tongue switch (50K pull-up)
+8 belly switch (50K pull-up)
+
+
+
+
+counts:
+200/revolution
