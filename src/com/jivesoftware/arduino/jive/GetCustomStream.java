@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,20 +33,26 @@ public class GetCustomStream extends JiveCommand {
     private ListenAndSpeak listenAndSpeak;
     private Thread pollingThread;
     private final AtomicReference<Boolean> running = new AtomicReference<Boolean>(false);
+    private final AtomicBoolean enabled;
 
     private GetDirectMessages getDirectMessages;
 
     public static void main(String[] args) throws Exception {
         ArduinoConnection arduinoConnection = new ArduinoConnection();
-        new GetCustomStream(new ListenAndSpeak(arduinoConnection)).execute();
+        AtomicBoolean enabled = new AtomicBoolean(true);
+        new GetCustomStream(new ListenAndSpeak(arduinoConnection, enabled), enabled).execute();
     }
 
-    public GetCustomStream(ListenAndSpeak listenAndSpeak) {
+    public GetCustomStream(ListenAndSpeak listenAndSpeak, AtomicBoolean enabled) {
         this.listenAndSpeak = listenAndSpeak;
         getDirectMessages = new GetDirectMessages(listenAndSpeak);
+        this.enabled = enabled;
     }
 
     public void execute() {
+        if (!enabled.get()) {
+            return; // not enabled, nothing to do
+        }
         try {
             System.out.println(new Date() + " - Polling " + (isEd() ? "Ed" : "Gato") + "'s custom stream");
             CloseableHttpResponse response = get(service);

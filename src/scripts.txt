@@ -1,3 +1,7 @@
+An easier way to to connect, meet your furby assistant, here are a few ideas how thi might work
+
+Wake up furby
+
 Script 1:
 Speak to Furby: tell gato that the quarter is looking good
 Reply from BS, Furby will read the content of the reply
@@ -12,3 +16,6 @@ Like reply from BS, Furby will dance
 
 Script 3:
 Speak to Furby: dance
+Speak to Furby: no, no. dance like travolta
+
+Put furby to sleep

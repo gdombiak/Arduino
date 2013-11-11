@@ -49,9 +49,9 @@ public class ListenAndSpeak {
     private String lastHeadline;
     private String lastDetail;
 
-    public ListenAndSpeak(ArduinoConnection arduinoConnection) throws InterruptedException {
+    public ListenAndSpeak(ArduinoConnection arduinoConnection, AtomicBoolean enabled) throws InterruptedException {
         this.arduinoConnection = arduinoConnection;
-        this.enabled = new AtomicBoolean(true);
+        this.enabled = enabled;
         monitorDictation = new Thread(new Runnable() {
 
             private State was = State.STOPPED;
@@ -208,6 +208,13 @@ public class ListenAndSpeak {
                 if (CreateDirectMessage.canHandle(textLowerCase)) {
                     // Execute "send direct message" command
                     new CreateDirectMessage(ListenAndSpeak.this).execute(text);
+                } else if (textLowerCase.contains("dance")) {
+                    // Read body of last news we heard from the stream
+                    if (textLowerCase.contains("travolta")) {
+                        play(AudioClip.TRAVOLTA);
+                    } else {
+                        play(AudioClip.DANCE);
+                    }
                 } else if (textLowerCase.contains("like")) {
                     if (likeContentCommand != null) {
                         likeContentCommand.execute();
@@ -234,9 +241,6 @@ public class ListenAndSpeak {
                     } else {
                         speak(getVoice(), "There is nothing new");
                     }
-                } else if (textLowerCase.contains("dance")) {
-                    // Read body of last news we heard from the stream
-                    dance();
                 } else {
                     System.out.println("Unrecognized text: " + text);
                     // TODO Let user know that text is not recognized
@@ -508,7 +512,7 @@ public class ListenAndSpeak {
 
     public static void main(String[] args) throws Exception {
         ArduinoConnection arduinoConnection = new ArduinoConnection();
-        ListenAndSpeak listenAndSpeak = new ListenAndSpeak(arduinoConnection);
+        ListenAndSpeak listenAndSpeak = new ListenAndSpeak(arduinoConnection, new AtomicBoolean(true));
         listenAndSpeak.start();
     }
 
@@ -523,6 +527,7 @@ public class ListenAndSpeak {
     public enum AudioClip {
         WAKING_UP("cock-a-doodle-doo.aif"),
         DANCE("dance-boogie.aif"),
+        TRAVOLTA("dance-like-travolta.aif"),
         LAUGH("he-he-he-tickle.aif"),
         SLEEPY_TIME("yawn-snore.aif");
 

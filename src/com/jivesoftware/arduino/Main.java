@@ -17,8 +17,8 @@ public class Main {
     public static void main(String[] args) throws Exception {
         AtomicBoolean enabled = new AtomicBoolean(true);
         ArduinoConnection arduinoConnection = new ArduinoConnection();
-        final ListenAndSpeak listenAndSpeak = new ListenAndSpeak(arduinoConnection);
-        GetCustomStream streamCommand = new GetCustomStream(listenAndSpeak);
+        final ListenAndSpeak listenAndSpeak = new ListenAndSpeak(arduinoConnection, enabled);
+        GetCustomStream streamCommand = new GetCustomStream(listenAndSpeak, enabled);
         arduinoConnection.initialize();
         arduinoConnection.addListener(new FurbyButtonAdapter(FurbyButtonListener.Button.LIGHT) {
             @Override
